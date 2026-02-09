@@ -88,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   ) => {
     if (!authService) throw new Error("Auth service not initialized");
 
+    console.log("AuthContext: Starting registration");
     const newUser = await authService.register(
       email,
       password,
@@ -95,8 +96,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       studentId,
       phone,
     );
+    console.log("AuthContext: Registration returned user:", newUser);
     setUser(newUser);
     await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+    console.log("AuthContext: User saved to storage, registration complete");
   };
 
   const logout = async () => {

@@ -1,18 +1,15 @@
-import * as SQLite from "expo-sqlite";
 import React, {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
-import { initializeDatabase, seedAdminUser } from "../database/schema";
 import { AuthService } from "../services/authService";
 import { NotificationService } from "../services/notificationService";
 import { TicketService } from "../services/ticketService";
 
 interface DatabaseContextType {
-  db: SQLite.SQLiteDatabase | null;
   authService: AuthService | null;
   ticketService: TicketService | null;
   notificationService: NotificationService | null;
@@ -20,7 +17,6 @@ interface DatabaseContextType {
 }
 
 const DatabaseContext = createContext<DatabaseContextType>({
-  db: null,
   authService: null,
   ticketService: null,
   notificationService: null,
@@ -42,7 +38,6 @@ interface DatabaseProviderProps {
 export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
   children,
 }) => {
-  const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [ticketService, setTicketService] = useState<TicketService | null>(
     null,
@@ -52,28 +47,24 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const setupDatabase = async () => {
+    const setupServices = async () => {
       try {
-        const database = await initializeDatabase();
-        await seedAdminUser(database);
-
-        setDb(database);
-        setAuthService(new AuthService(database));
-        setTicketService(new TicketService(database));
-        setNotificationService(new NotificationService(database));
+        // Initialize services (no database needed, they use API)
+        setAuthService(new AuthService());
+        setTicketService(new TicketService());
+        setNotificationService(new NotificationService());
         setIsReady(true);
       } catch (error) {
-        console.error("Failed to initialize database:", error);
+        console.error("Failed to initialize services:", error);
       }
     };
 
-    setupDatabase();
+    setupServices();
   }, []);
 
   return (
     <DatabaseContext.Provider
       value={{
-        db,
         authService,
         ticketService,
         notificationService,

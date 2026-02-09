@@ -1,60 +1,66 @@
-import * as SQLite from "expo-sqlite";
 import { Notification } from "../types";
+import { apiClient } from "../utils/apiClient";
 
 export class NotificationService {
-  private db: SQLite.SQLiteDatabase;
-
-  constructor(database: SQLite.SQLiteDatabase) {
-    this.db = database;
-  }
+  constructor() {}
 
   async getUserNotifications(
     userId: number,
     unreadOnly: boolean = false,
   ): Promise<Notification[]> {
-    let query = "SELECT * FROM notifications WHERE user_id = ?";
-    const params: any[] = [userId];
+    const response = await apiClient.get<{ notifications: Notification[] }>(
+      "/notifications",
+    );
 
-    if (unreadOnly) {
-      query += " AND is_read = 0";
+    if (response.error) {
+      return [];
     }
 
-    query += " ORDER BY created_at DESC";
+    let notifications = response.data?.notifications || [];
 
-    const notifications = await this.db.getAllAsync<Notification>(
-      query,
-      params,
-    );
+    if (unreadOnly) {
+      notifications = notifications.filter((n) => n.is_read === 0);
+    }
+
     return notifications;
   }
 
   async getUnreadCount(userId: number): Promise<number> {
-    const result = await this.db.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0",
-      [userId],
+    const response = await apiClient.get<{ count: number }>(
+      "/notifications/unread-count",
     );
 
-    return result?.count || 0;
+    if (response.error) {
+      return 0;
+    }
+
+    return response.data?.count || 0;
   }
 
   async markAsRead(notificationId: number): Promise<void> {
-    await this.db.runAsync(
-      "UPDATE notifications SET is_read = 1 WHERE id = ?",
-      [notificationId],
+    const response = await apiClient.patch(
+      `/notifications/${notificationId}/read`,
     );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
   }
 
   async markAllAsRead(userId: number): Promise<void> {
-    await this.db.runAsync(
-      "UPDATE notifications SET is_read = 1 WHERE user_id = ?",
-      [userId],
-    );
+    const response = await apiClient.patch("/notifications/mark-all-read");
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
   }
 
   async deleteNotification(notificationId: number): Promise<void> {
-    await this.db.runAsync("DELETE FROM notifications WHERE id = ?", [
-      notificationId,
-    ]);
+    const response = await apiClient.delete(`/notifications/${notificationId}`);
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
   }
 
   async createNotification(
@@ -63,9 +69,7 @@ export class NotificationService {
     message: string,
     ticketId?: number,
   ): Promise<void> {
-    await this.db.runAsync(
-      "INSERT INTO notifications (user_id, ticket_id, title, message) VALUES (?, ?, ?, ?)",
-      [userId, ticketId || null, title, message],
-    );
+    // Notifications are created by the backend automatically
+    console.warn("Client-side notification creation not supported with API");
   }
 }

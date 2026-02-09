@@ -1,21 +1,17 @@
-import * as SQLite from "expo-sqlite";
 import {
-    Attachment,
-    Comment,
-    StatusHistory,
-    Ticket,
-    TicketCategory,
-    TicketPriority,
-    TicketStatus,
-    TicketWithUser,
+  Attachment,
+  Comment,
+  StatusHistory,
+  Ticket,
+  TicketCategory,
+  TicketPriority,
+  TicketStatus,
+  TicketWithUser,
 } from "../types";
+import { apiClient } from "../utils/apiClient";
 
 export class TicketService {
-  private db: SQLite.SQLiteDatabase;
-
-  constructor(database: SQLite.SQLiteDatabase) {
-    this.db = database;
-  }
+  constructor() {}
 
   async createTicket(
     userId: number,
@@ -24,39 +20,65 @@ export class TicketService {
     category: TicketCategory,
     priority: TicketPriority = "medium",
   ): Promise<number> {
-    const result = await this.db.runAsync(
-      "INSERT INTO tickets (user_id, title, description, category, status, priority) VALUES (?, ?, ?, ?, ?, ?)",
-      [userId, title, description, category, "pending", priority],
+    console.log("TicketService: Creating ticket:", {
+      title,
+      category,
+      priority,
+    });
+
+    const response = await apiClient.post<{ ticket: Ticket; message?: string }>(
+      "/tickets",
+      {
+        title,
+        description,
+        category,
+        priority,
+      },
     );
 
-    // Create status history
-    await this.db.runAsync(
-      "INSERT INTO status_history (ticket_id, new_status, changed_by) VALUES (?, ?, ?)",
-      [result.lastInsertRowId, "pending", userId],
-    );
+    console.log("TicketService: Create ticket response:", {
+      hasError: !!response.error,
+      hasData: !!response.data,
+      hasTicket: !!response.data?.ticket,
+      ticketId: response.data?.ticket?.id,
+    });
 
-    return result.lastInsertRowId;
+    if (response.error) {
+      console.error("TicketService: Create ticket error:", response.error);
+      throw new Error(response.error);
+    }
+
+    const ticketId = response.data?.ticket?.id;
+    if (!ticketId && ticketId !== 0) {
+      console.error("TicketService: No ticket ID in response", response.data);
+      throw new Error("Failed to create ticket");
+    }
+
+    console.log("TicketService: Ticket created successfully, ID:", ticketId);
+    return ticketId;
   }
 
   async getTicketById(ticketId: number): Promise<TicketWithUser | null> {
-    const ticket = await this.db.getFirstAsync<TicketWithUser>(
-      `SELECT t.*, u.email as user_email, u.full_name as user_name, u.student_id
-       FROM tickets t
-       JOIN users u ON t.user_id = u.id
-       WHERE t.id = ?`,
-      [ticketId],
-    );
+    const response = await apiClient.get<{
+      ticket: TicketWithUser;
+      comments: Comment[];
+    }>(`/tickets/${ticketId}`);
 
-    return ticket || null;
+    if (response.error) {
+      return null;
+    }
+
+    return response.data?.ticket || null;
   }
 
   async getUserTickets(userId: number): Promise<Ticket[]> {
-    const tickets = await this.db.getAllAsync<Ticket>(
-      "SELECT * FROM tickets WHERE user_id = ? ORDER BY created_at DESC",
-      [userId],
-    );
+    const response = await apiClient.get<{ tickets: Ticket[] }>("/tickets");
 
-    return tickets;
+    if (response.error) {
+      return [];
+    }
+
+    return response.data?.tickets || [];
   }
 
   async getAllTickets(filters?: {
@@ -64,32 +86,27 @@ export class TicketService {
     category?: TicketCategory;
     priority?: TicketPriority;
   }): Promise<TicketWithUser[]> {
-    let query = `
-      SELECT t.*, u.email as user_email, u.full_name as user_name, u.student_id
-      FROM tickets t
-      JOIN users u ON t.user_id = u.id
-      WHERE 1=1
-    `;
-    const params: any[] = [];
+    const response = await apiClient.get<{ tickets: TicketWithUser[] }>(
+      "/tickets",
+    );
 
+    if (response.error) {
+      return [];
+    }
+
+    let tickets = response.data?.tickets || [];
+
+    // Apply client-side filtering if needed
     if (filters?.status) {
-      query += " AND t.status = ?";
-      params.push(filters.status);
+      tickets = tickets.filter((t) => t.status === filters.status);
     }
-
     if (filters?.category) {
-      query += " AND t.category = ?";
-      params.push(filters.category);
+      tickets = tickets.filter((t) => t.category === filters.category);
     }
-
     if (filters?.priority) {
-      query += " AND t.priority = ?";
-      params.push(filters.priority);
+      tickets = tickets.filter((t) => t.priority === filters.priority);
     }
 
-    query += " ORDER BY t.created_at DESC";
-
-    const tickets = await this.db.getAllAsync<TicketWithUser>(query, params);
     return tickets;
   }
 
@@ -98,47 +115,13 @@ export class TicketService {
     newStatus: TicketStatus,
     changedBy: number,
   ): Promise<void> {
-    // Get current status
-    const ticket = await this.db.getFirstAsync<{
-      status: TicketStatus;
-      user_id: number;
-    }>("SELECT status, user_id FROM tickets WHERE id = ?", [ticketId]);
+    const response = await apiClient.patch(`/tickets/${ticketId}/status`, {
+      status: newStatus,
+    });
 
-    if (!ticket) {
-      throw new Error("Ticket not found");
+    if (response.error) {
+      throw new Error(response.error);
     }
-
-    // Update ticket status
-    const updates: string[] = ["status = ?", "updated_at = CURRENT_TIMESTAMP"];
-    const params: any[] = [newStatus];
-
-    if (newStatus === "resolved" || newStatus === "closed") {
-      updates.push("resolved_at = CURRENT_TIMESTAMP");
-    }
-
-    params.push(ticketId);
-
-    await this.db.runAsync(
-      `UPDATE tickets SET ${updates.join(", ")} WHERE id = ?`,
-      params,
-    );
-
-    // Add to status history
-    await this.db.runAsync(
-      "INSERT INTO status_history (ticket_id, old_status, new_status, changed_by) VALUES (?, ?, ?, ?)",
-      [ticketId, ticket.status, newStatus, changedBy],
-    );
-
-    // Create notification for the ticket owner
-    await this.db.runAsync(
-      "INSERT INTO notifications (user_id, ticket_id, title, message) VALUES (?, ?, ?, ?)",
-      [
-        ticket.user_id,
-        ticketId,
-        "Ticket Status Updated",
-        `Your ticket status has been changed from "${ticket.status}" to "${newStatus}"`,
-      ],
-    );
   }
 
   async addComment(
@@ -146,60 +129,31 @@ export class TicketService {
     userId: number,
     comment: string,
   ): Promise<void> {
-    await this.db.runAsync(
-      "INSERT INTO comments (ticket_id, user_id, comment) VALUES (?, ?, ?)",
-      [ticketId, userId, comment],
-    );
+    const response = await apiClient.post(`/tickets/${ticketId}/comments`, {
+      comment,
+    });
 
-    // Update ticket's updated_at
-    await this.db.runAsync(
-      "UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-      [ticketId],
-    );
-
-    // Get ticket owner to create notification
-    const ticket = await this.db.getFirstAsync<{ user_id: number }>(
-      "SELECT user_id FROM tickets WHERE id = ?",
-      [ticketId],
-    );
-
-    if (ticket && ticket.user_id !== userId) {
-      await this.db.runAsync(
-        "INSERT INTO notifications (user_id, ticket_id, title, message) VALUES (?, ?, ?, ?)",
-        [
-          ticket.user_id,
-          ticketId,
-          "New Comment",
-          "A new comment was added to your ticket",
-        ],
-      );
+    if (response.error) {
+      throw new Error(response.error);
     }
   }
 
   async getTicketComments(ticketId: number): Promise<Comment[]> {
-    const comments = await this.db.getAllAsync<Comment>(
-      `SELECT c.*, u.full_name as user_name, u.role as user_role
-       FROM comments c
-       JOIN users u ON c.user_id = u.id
-       WHERE c.ticket_id = ?
-       ORDER BY c.created_at ASC`,
-      [ticketId],
-    );
+    const response = await apiClient.get<{
+      ticket: TicketWithUser;
+      comments: Comment[];
+    }>(`/tickets/${ticketId}`);
 
-    return comments;
+    if (response.error) {
+      return [];
+    }
+
+    return response.data?.comments || [];
   }
 
   async getTicketStatusHistory(ticketId: number): Promise<StatusHistory[]> {
-    const history = await this.db.getAllAsync<StatusHistory>(
-      `SELECT sh.*, u.full_name as changed_by_name
-       FROM status_history sh
-       JOIN users u ON sh.changed_by = u.id
-       WHERE sh.ticket_id = ?
-       ORDER BY sh.changed_at DESC`,
-      [ticketId],
-    );
-
-    return history;
+    // Status history not implemented in API yet - return empty array
+    return [];
   }
 
   async addAttachment(
@@ -209,38 +163,37 @@ export class TicketService {
     fileType?: string,
     fileSize?: number,
   ): Promise<void> {
-    await this.db.runAsync(
-      "INSERT INTO attachments (ticket_id, file_name, file_path, file_type, file_size) VALUES (?, ?, ?, ?, ?)",
-      [ticketId, fileName, filePath, fileType || null, fileSize || null],
-    );
+    // Attachments not implemented in API yet
+    console.warn("Attachments not yet supported with API");
   }
 
   async getTicketAttachments(ticketId: number): Promise<Attachment[]> {
-    const attachments = await this.db.getAllAsync<Attachment>(
-      "SELECT * FROM attachments WHERE ticket_id = ? ORDER BY uploaded_at DESC",
-      [ticketId],
-    );
-
-    return attachments;
+    // Attachments not implemented in API yet - return empty array
+    return [];
   }
 
   async getTicketStats(userId?: number) {
-    const baseQuery = userId
-      ? "SELECT status, COUNT(*) as count FROM tickets WHERE user_id = ? GROUP BY status"
-      : "SELECT status, COUNT(*) as count FROM tickets GROUP BY status";
+    // Get user's own tickets instead of calling admin-only stats endpoint
+    const response = await apiClient.get<{ tickets: Ticket[] }>("/tickets");
 
-    const params = userId ? [userId] : [];
-    const stats = await this.db.getAllAsync<{ status: string; count: number }>(
-      baseQuery,
-      params,
-    );
+    if (response.error || !response.data?.tickets) {
+      console.warn("Failed to get ticket stats:", response.error);
+      return {
+        pending: 0,
+        inProgress: 0,
+        resolved: 0,
+        closed: 0,
+        total: 0,
+      };
+    }
 
+    const tickets = response.data.tickets;
     return {
-      pending: stats.find((s) => s.status === "pending")?.count || 0,
-      inProgress: stats.find((s) => s.status === "in-progress")?.count || 0,
-      resolved: stats.find((s) => s.status === "resolved")?.count || 0,
-      closed: stats.find((s) => s.status === "closed")?.count || 0,
-      total: stats.reduce((sum, s) => sum + s.count, 0),
+      pending: tickets.filter((t) => t.status === "pending").length,
+      inProgress: tickets.filter((t) => t.status === "in-progress").length,
+      resolved: tickets.filter((t) => t.status === "resolved").length,
+      closed: tickets.filter((t) => t.status === "closed").length,
+      total: tickets.length,
     };
   }
 }

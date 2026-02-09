@@ -1,13 +1,8 @@
-import * as SQLite from "expo-sqlite";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "../types";
+import { apiClient } from "../utils/apiClient";
 
 export class AuthService {
-  private db: SQLite.SQLiteDatabase;
-
-  constructor(database: SQLite.SQLiteDatabase) {
-    this.db = database;
-  }
-
   async register(
     email: string,
     password: string,
@@ -15,109 +10,89 @@ export class AuthService {
     studentId?: string,
     phone?: string,
   ): Promise<User> {
-    try {
-      const result = await this.db.runAsync(
-        "INSERT INTO users (email, password, full_name, student_id, phone, role) VALUES (?, ?, ?, ?, ?, ?)",
-        [
-          email,
-          password,
-          fullName,
-          studentId || null,
-          phone || null,
-          "student",
-        ],
-      );
+    console.log("AuthService: Starting registration for", email);
 
-      const user = await this.db.getFirstAsync<User>(
-        "SELECT id, email, full_name, student_id, phone, role, created_at FROM users WHERE id = ?",
-        [result.lastInsertRowId],
-      );
+    const response = await apiClient.post<{
+      user: User;
+      token: string;
+      message?: string;
+    }>("/auth/register", {
+      email,
+      password,
+      full_name: fullName,
+      student_id: studentId,
+      phone,
+    });
 
-      if (!user) {
-        throw new Error("Failed to create user");
-      }
+    console.log("AuthService: Registration response:", {
+      hasError: !!response.error,
+      hasData: !!response.data,
+      hasUser: !!response.data?.user,
+      hasToken: !!response.data?.token,
+    });
 
-      return user;
-    } catch (error: any) {
-      if (error.message.includes("UNIQUE constraint failed")) {
-        throw new Error("Email already exists");
-      }
-      throw error;
+    if (response.error) {
+      console.error("AuthService: Registration error:", response.error);
+      throw new Error(response.error);
     }
+
+    if (response.data?.token) {
+      console.log("AuthService: Saving token to storage");
+      await AsyncStorage.setItem("auth_token", response.data.token);
+    }
+
+    if (!response.data?.user) {
+      console.error("AuthService: No user in response data");
+      throw new Error("Failed to create user");
+    }
+
+    console.log("AuthService: Registration successful, returning user");
+    return response.data.user;
   }
 
   async login(email: string, password: string): Promise<User> {
-    const user = await this.db.getFirstAsync<User>(
-      "SELECT id, email, full_name, student_id, phone, role, created_at FROM users WHERE email = ? AND password = ?",
-      [email, password],
+    const response = await apiClient.post<{ user: User; token: string }>(
+      "/auth/login",
+      { email, password },
     );
 
-    if (!user) {
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    if (response.data?.token) {
+      await AsyncStorage.setItem("auth_token", response.data.token);
+    }
+
+    if (!response.data?.user) {
       throw new Error("Invalid email or password");
     }
 
-    return user;
+    return response.data.user;
+  }
+
+  async logout(): Promise<void> {
+    await apiClient.post("/auth/logout");
+    await AsyncStorage.removeItem("auth_token");
   }
 
   async getUserById(userId: number): Promise<User | null> {
-    const user = await this.db.getFirstAsync<User>(
-      "SELECT id, email, full_name, student_id, phone, role, created_at FROM users WHERE id = ?",
-      [userId],
-    );
+    const response = await apiClient.get<{ user: User }>("/auth/me");
 
-    return user || null;
+    if (response.error) {
+      return null;
+    }
+
+    return response.data?.user || null;
   }
 
-  async updateProfile(
-    userId: number,
-    updates: {
-      full_name?: string;
-      student_id?: string;
-      phone?: string;
-    },
-  ): Promise<void> {
-    const fields: string[] = [];
-    const values: any[] = [];
+  async getCurrentUser(): Promise<User | null> {
+    const response = await apiClient.get<{ user: User }>("/auth/me");
 
-    if (updates.full_name) {
-      fields.push("full_name = ?");
-      values.push(updates.full_name);
-    }
-    if (updates.student_id) {
-      fields.push("student_id = ?");
-      values.push(updates.student_id);
-    }
-    if (updates.phone) {
-      fields.push("phone = ?");
-      values.push(updates.phone);
+    if (response.error) {
+      return null;
     }
 
-    if (fields.length === 0) return;
-
-    values.push(userId);
-    await this.db.runAsync(
-      `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
-      values,
-    );
-  }
-
-  async changePassword(
-    userId: number,
-    oldPassword: string,
-    newPassword: string,
-  ): Promise<void> {
-    const user = await this.db.getFirstAsync<{ password: string }>(
-      "SELECT password FROM users WHERE id = ?",
-      [userId],
-    );
-
-    if (!user || user.password !== oldPassword) {
-      throw new Error("Current password is incorrect");
-    }
-
-    await this.db.runAsync("UPDATE users SET password = ? WHERE id = ?", [
-      newPassword,
-      userId,
-    ]);
+    return response.data?.user || null;
   }
 }
