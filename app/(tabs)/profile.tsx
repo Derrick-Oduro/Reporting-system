@@ -55,7 +55,7 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{user?.email}</Text>
         <View style={styles.roleBadge}>
           <Text style={styles.roleText}>
-            {user?.role === "admin" ? "👑 Administrator" : "👤 Student"}
+            {user?.role === "admin" ? "Administrator" : "Student"}
           </Text>
         </View>
       </View>
@@ -121,16 +121,6 @@ export default function ProfileScreen() {
 
       {/* Actions */}
       <View style={styles.section}>
-        <TouchableOpacity
-          style={[
-            styles.logoutButton,
-            { backgroundColor: "#ff9800", marginBottom: 10 },
-          ]}
-          onPress={() => router.push("/test-logout")}
-        >
-          <Text style={styles.logoutButtonText}>🔧 Debug Logout</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -149,100 +139,130 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FAFAFA",
   },
   header: {
-    backgroundColor: "#1a73e8",
-    padding: 32,
+    backgroundColor: "#153D6F",
+    padding: 36,
     paddingTop: 60,
     alignItems: "center",
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatarText: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#1a73e8",
+    fontSize: 40,
+    fontWeight: "800",
+    color: "#153D6F",
   },
   name: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 26,
+    fontWeight: "800",
     color: "#fff",
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   email: {
-    fontSize: 14,
-    color: "#e3f2fd",
-    marginBottom: 12,
+    fontSize: 15,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 16,
+    fontWeight: "500",
   },
   roleBadge: {
     backgroundColor: "rgba(255,255,255,0.2)",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
   },
   roleText: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   section: {
     backgroundColor: "#fff",
-    marginTop: 12,
-    padding: 20,
+    marginTop: 16,
+    padding: 24,
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#212121",
+    marginBottom: 20,
+    letterSpacing: -0.3,
   },
   infoItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#E0E0E0",
   },
   infoLabel: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 15,
+    color: "#757575",
+    fontWeight: "500",
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#212121",
   },
   aboutText: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 22,
+    fontSize: 15,
+    color: "#616161",
+    lineHeight: 24,
+    fontWeight: "500",
   },
   logoutButton: {
-    backgroundColor: "#d32f2f",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#F44336",
+    padding: 18,
+    borderRadius: 12,
     alignItems: "center",
+    shadowColor: "#F44336",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutButtonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   footer: {
-    padding: 32,
+    padding: 40,
     alignItems: "center",
   },
   footerText: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 4,
+    fontSize: 13,
+    color: "#9E9E9E",
+    marginBottom: 6,
+    fontWeight: "500",
   },
 });

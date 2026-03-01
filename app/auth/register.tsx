@@ -174,7 +174,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FAFAFA",
   },
   scrollContent: {
     flexGrow: 1,
@@ -182,32 +182,32 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
     paddingVertical: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1a73e8",
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#153D6F",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 16,
+    fontWeight: "400",
+    color: "#666",
     textAlign: "center",
-    marginBottom: 32,
+    marginBottom: 28,
   },
   form: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 6,
     padding: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   inputGroup: {
     marginBottom: 16,
@@ -215,26 +215,27 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: "#212121",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: "#E0E0E0",
+    borderRadius: 4,
     padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
+    fontSize: 15,
+    backgroundColor: "#F5F5F5",
+    color: "#212121",
   },
   button: {
-    backgroundColor: "#1a73e8",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#153D6F",
+    padding: 14,
+    borderRadius: 4,
     alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   buttonText: {
     color: "#fff",
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   linkButton: {
-    marginTop: 16,
+    marginTop: 20,
     alignItems: "center",
   },
   linkText: {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkTextBold: {
-    color: "#1a73e8",
+    color: "#153D6F",
     fontWeight: "600",
   },
 });

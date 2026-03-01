@@ -167,12 +167,13 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F5F5F5",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
@@ -180,27 +181,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 60,
-    backgroundColor: "#1a73e8",
+    backgroundColor: "#153D6F",
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "600",
     color: "#fff",
   },
   subtitle: {
     fontSize: 14,
-    color: "#e3f2fd",
+    color: "rgba(255,255,255,0.85)",
     marginTop: 4,
   },
   markAllButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 8,
+    borderRadius: 4,
   },
   markAllText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
   listContent: {
@@ -208,19 +209,19 @@ const styles = StyleSheet.create({
   },
   notificationCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 6,
+    padding: 14,
+    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   notificationUnread: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#1a73e8",
-    backgroundColor: "#f0f7ff",
+    borderLeftWidth: 3,
+    borderLeftColor: "#153D6F",
+    backgroundColor: "#E3F2FD",
   },
   notificationContent: {
     flex: 1,
@@ -234,19 +235,20 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#212121",
     flex: 1,
   },
   unreadDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#1a73e8",
+    backgroundColor: "#153D6F",
   },
   notificationMessage: {
     fontSize: 14,
     color: "#666",
     marginBottom: 8,
+    lineHeight: 20,
   },
   notificationDate: {
     fontSize: 12,
@@ -259,9 +261,9 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#212121",
     marginBottom: 8,
   },
   emptySubtext: {

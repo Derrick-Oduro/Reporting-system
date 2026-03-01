@@ -1,123 +1,19 @@
 import bcrypt from "bcryptjs";
-import fs from "fs";
+import Database from "better-sqlite3";
 import path from "path";
-import initSqlJs, { Database } from "sql.js";
 
 const dbPath =
   process.env.DATABASE_PATH || path.join(__dirname, "../../database.db");
 
-let sqlDb: Database;
+const db: Database.Database = new Database(dbPath);
 
-async function loadDatabase(): Promise<Database> {
-  const SQL = await initSqlJs();
-
-  // Try to load existing database
-  if (fs.existsSync(dbPath)) {
-    const buffer = fs.readFileSync(dbPath);
-    return new SQL.Database(buffer);
-  }
-
-  // Create new database
-  return new SQL.Database();
-}
-
-async function getDb(): Promise<Database> {
-  if (!sqlDb) {
-    sqlDb = await loadDatabase();
-  }
-  return sqlDb;
-}
-
-function saveDatabase() {
-  if (sqlDb) {
-    const data = sqlDb.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
-  }
-}
-
-// Wrapper to make it look like better-sqlite3
-class DbWrapper {
-  prepare(sql: string) {
-    return {
-      get: (...params: any[]) => {
-        if (!sqlDb) return null;
-        try {
-          const results = sqlDb.exec(sql, params);
-          if (results.length === 0 || results[0].values.length === 0)
-            return null;
-
-          const obj: any = {};
-          results[0].columns.forEach((col: string, idx: number) => {
-            obj[col] = results[0].values[0][idx];
-          });
-          return obj;
-        } catch (error) {
-          return null;
-        }
-      },
-      all: (...params: any[]) => {
-        if (!sqlDb) return [];
-        try {
-          const results = sqlDb.exec(sql, params);
-          if (results.length === 0) return [];
-
-          return results[0].values.map((row: any[]) => {
-            const obj: any = {};
-            results[0].columns.forEach((col: string, idx: number) => {
-              obj[col] = row[idx];
-            });
-            return obj;
-          });
-        } catch (error) {
-          return [];
-        }
-      },
-      run: (...params: any[]) => {
-        if (!sqlDb) return { lastInsertRowid: 0, changes: 0 };
-        try {
-          sqlDb.run(sql, params);
-          saveDatabase();
-
-          // Get last insert id
-          const result = sqlDb.exec("SELECT last_insert_rowid() as id");
-          const lastInsertRowid =
-            result.length > 0 && result[0].values.length > 0
-              ? (result[0].values[0][0] as number)
-              : 0;
-
-          return {
-            lastInsertRowid,
-            changes: 1,
-          };
-        } catch (error) {
-          console.error("Database run error:", error);
-          return { lastInsertRowid: 0, changes: 0 };
-        }
-      },
-    };
-  }
-
-  exec(sql: string) {
-    if (sqlDb) {
-      sqlDb.run(sql);
-      saveDatabase();
-    }
-  }
-
-  pragma(pragma: string) {
-    // sql.js doesn't support pragma, but we can ignore it
-    return;
-  }
-}
-
-const db = new DbWrapper();
+// Enable foreign keys
+db.pragma("foreign_keys = ON");
 
 export async function initializeDatabase() {
-  // Initialize the database (loads or creates it)
-  await getDb();
+  console.log("Initializing database...");
 
-  // Now use the db wrapper to create tables
+  // Create tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +27,6 @@ export async function initializeDatabase() {
     );
   `);
 
-  // Create Tickets table
   db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,7 +43,6 @@ export async function initializeDatabase() {
     );
   `);
 
-  // Create Attachments table
   db.exec(`
     CREATE TABLE IF NOT EXISTS attachments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,7 +56,6 @@ export async function initializeDatabase() {
     );
   `);
 
-  // Create Comments table
   db.exec(`
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +68,6 @@ export async function initializeDatabase() {
     );
   `);
 
-  // Create Notifications table
   db.exec(`
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,7 +83,6 @@ export async function initializeDatabase() {
     );
   `);
 
-  saveDatabase();
   console.log("Database initialized successfully");
 
   // Seed admin user if not exists

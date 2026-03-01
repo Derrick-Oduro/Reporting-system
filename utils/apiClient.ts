@@ -41,6 +41,13 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    console.log(`📤 API Request: ${options.method || "GET"} ${endpoint}`);
+    console.log("URL:", url);
+    console.log("Has Token:", !!token);
+    if (options.body) {
+      console.log("Request Body:", options.body);
+    }
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -55,14 +62,13 @@ class ApiClient {
 
       const data = await response.json();
 
-      console.log(`API ${options.method || "GET"} ${endpoint}:`, {
-        status: response.status,
-        ok: response.ok,
-        data: data,
-      });
+      console.log(`📥 API Response: ${options.method || "GET"} ${endpoint}`);
+      console.log("Status:", response.status);
+      console.log("OK:", response.ok);
+      console.log("Response Data:", JSON.stringify(data, null, 2));
 
       if (!response.ok) {
-        console.error(`API Error ${endpoint}:`, data);
+        console.error(`❌ API Error ${endpoint}:`, data);
         return {
           error: data.error || data.message || "Request failed",
         };
@@ -71,7 +77,9 @@ class ApiClient {
       // Return the parsed data directly (backend already returns proper structure)
       return { data: data as T };
     } catch (error: any) {
-      console.error("API request error:", error);
+      console.error("❌ API request error:", error);
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
 
       if (error.name === "AbortError") {
         return { error: "Request timeout" };
@@ -103,6 +111,56 @@ class ApiClient {
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: "DELETE" });
+  }
+
+  async uploadFile(
+    endpoint: string,
+    fileUri: string,
+    fileName: string,
+    mimeType: string,
+  ): Promise<ApiResponse<any>> {
+    const url = `${this.baseURL}${endpoint}`;
+    const token = await this.getAuthToken();
+
+    console.log(`📤 File Upload: POST ${endpoint}`);
+    console.log("URL:", url);
+    console.log("File:", fileName);
+
+    try {
+      const formData = new FormData();
+
+      // Fetch the file and create a blob
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+
+      // Append the file to FormData
+      formData.append("file", blob, fileName);
+
+      const uploadResponse = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: formData,
+      });
+
+      const result = await uploadResponse.json();
+
+      console.log(`📥 Upload Response:`, result);
+
+      if (!uploadResponse.ok) {
+        return {
+          error: result.error || result.message || "Upload failed",
+        };
+      }
+
+      return { data: result };
+    } catch (error: any) {
+      console.error("❌ Upload error:", error);
+      return {
+        error: error.message || "Upload failed",
+      };
+    }
   }
 }
 

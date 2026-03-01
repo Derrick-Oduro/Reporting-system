@@ -1,12 +1,12 @@
 import {
-  Attachment,
-  Comment,
-  StatusHistory,
-  Ticket,
-  TicketCategory,
-  TicketPriority,
-  TicketStatus,
-  TicketWithUser,
+    Attachment,
+    Comment,
+    StatusHistory,
+    Ticket,
+    TicketCategory,
+    TicketPriority,
+    TicketStatus,
+    TicketWithUser,
 } from "../types";
 import { apiClient } from "../utils/apiClient";
 
@@ -20,11 +20,10 @@ export class TicketService {
     category: TicketCategory,
     priority: TicketPriority = "medium",
   ): Promise<number> {
-    console.log("TicketService: Creating ticket:", {
-      title,
-      category,
-      priority,
-    });
+    console.log("=== TicketService: Creating ticket ===");
+    console.log("Title:", title);
+    console.log("Category:", category);
+    console.log("Priority:", priority);
 
     const response = await apiClient.post<{ ticket: Ticket; message?: string }>(
       "/tickets",
@@ -36,25 +35,33 @@ export class TicketService {
       },
     );
 
-    console.log("TicketService: Create ticket response:", {
-      hasError: !!response.error,
-      hasData: !!response.data,
-      hasTicket: !!response.data?.ticket,
-      ticketId: response.data?.ticket?.id,
-    });
+    console.log("=== TicketService: Response Received ===");
+    console.log("Has Error:", !!response.error);
+    console.log("Error:", response.error);
+    console.log("Has Data:", !!response.data);
+    console.log("Full Response Data:", JSON.stringify(response.data, null, 2));
 
     if (response.error) {
-      console.error("TicketService: Create ticket error:", response.error);
+      console.error("❌ TicketService: Create ticket error:", response.error);
       throw new Error(response.error);
     }
 
-    const ticketId = response.data?.ticket?.id;
-    if (!ticketId && ticketId !== 0) {
-      console.error("TicketService: No ticket ID in response", response.data);
-      throw new Error("Failed to create ticket");
+    if (!response.data) {
+      console.error("❌ TicketService: No data in response");
+      throw new Error("No response data from server");
     }
 
-    console.log("TicketService: Ticket created successfully, ID:", ticketId);
+    const ticketId = response.data?.ticket?.id;
+    console.log("Extracted Ticket ID:", ticketId);
+    console.log("Ticket ID Type:", typeof ticketId);
+
+    if (ticketId === undefined || ticketId === null) {
+      console.error("❌ TicketService: No ticket ID in response");
+      console.error("Response data:", response.data);
+      throw new Error("Failed to create ticket - no ID returned");
+    }
+
+    console.log("✅ TicketService: Ticket created successfully, ID:", ticketId);
     return ticketId;
   }
 
@@ -62,6 +69,7 @@ export class TicketService {
     const response = await apiClient.get<{
       ticket: TicketWithUser;
       comments: Comment[];
+      attachments: Attachment[];
     }>(`/tickets/${ticketId}`);
 
     if (response.error) {
@@ -142,6 +150,7 @@ export class TicketService {
     const response = await apiClient.get<{
       ticket: TicketWithUser;
       comments: Comment[];
+      attachments: Attachment[];
     }>(`/tickets/${ticketId}`);
 
     if (response.error) {
@@ -156,6 +165,40 @@ export class TicketService {
     return [];
   }
 
+  async uploadFile(
+    fileUri: string,
+    fileName: string,
+    mimeType: string,
+  ): Promise<string> {
+    console.log("TicketService: Uploading file:", {
+      fileUri,
+      fileName,
+      mimeType,
+    });
+
+    const response = await apiClient.uploadFile(
+      "/tickets/upload",
+      fileUri,
+      fileName,
+      mimeType,
+    );
+
+    if (response.error) {
+      console.error("TicketService: Upload error:", response.error);
+      throw new Error(response.error);
+    }
+
+    if (!response.data?.file?.path) {
+      throw new Error("Invalid upload response");
+    }
+
+    console.log(
+      "TicketService: File uploaded successfully:",
+      response.data.file.path,
+    );
+    return response.data.file.path;
+  }
+
   async addAttachment(
     ticketId: number,
     fileName: string,
@@ -163,13 +206,57 @@ export class TicketService {
     fileType?: string,
     fileSize?: number,
   ): Promise<void> {
-    // Attachments not implemented in API yet
-    console.warn("Attachments not yet supported with API");
+    console.log("TicketService: Adding attachment:", {
+      ticketId,
+      fileName,
+      filePath,
+      fileType,
+      fileSize,
+    });
+
+    const response = await apiClient.post(`/tickets/${ticketId}/attachments`, {
+      file_name: fileName,
+      file_path: filePath,
+      file_type: fileType,
+      file_size: fileSize,
+    });
+
+    console.log("TicketService: Add attachment response:", {
+      hasError: !!response.error,
+      hasData: !!response.data,
+      response: response.data,
+    });
+
+    if (response.error) {
+      console.error("Failed to add attachment:", response.error);
+      throw new Error(response.error);
+    }
   }
 
   async getTicketAttachments(ticketId: number): Promise<Attachment[]> {
-    // Attachments not implemented in API yet - return empty array
-    return [];
+    console.log("TicketService: Fetching attachments for ticket", ticketId);
+    const response = await apiClient.get<{
+      ticket: TicketWithUser;
+      comments: Comment[];
+      attachments: Attachment[];
+    }>(`/tickets/${ticketId}`);
+
+    console.log("TicketService: Attachments response:", {
+      hasError: !!response.error,
+      hasData: !!response.data,
+      attachmentsCount: response.data?.attachments?.length || 0,
+      attachments: response.data?.attachments,
+    });
+
+    if (response.error) {
+      console.error(
+        "TicketService: Error fetching attachments:",
+        response.error,
+      );
+      return [];
+    }
+
+    return response.data?.attachments || [];
   }
 
   async getTicketStats(userId?: number) {

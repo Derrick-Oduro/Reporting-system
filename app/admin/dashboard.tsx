@@ -122,9 +122,11 @@ export default function AdminDashboard() {
         </Text>
 
         <View style={styles.ticketMeta}>
-          <Text style={styles.metaText}>👤 {item.user_name}</Text>
-          <Text style={styles.metaText}>📁 {item.category}</Text>
-          <Text style={styles.metaText}>📅 {formatDate(item.created_at)}</Text>
+          <Text style={styles.metaText}>User: {item.user_name}</Text>
+          <Text style={styles.metaText}>Category: {item.category}</Text>
+          <Text style={styles.metaText}>
+            Date: {formatDate(item.created_at)}
+          </Text>
         </View>
       </TouchableOpacity>
 
@@ -251,12 +253,13 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F5F5F5",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
@@ -264,48 +267,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     paddingTop: 60,
-    backgroundColor: "#673ab7",
+    backgroundColor: "#153D6F",
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "600",
     color: "#fff",
   },
   subtitle: {
     fontSize: 14,
-    color: "#e1bee7",
+    color: "rgba(255,255,255,0.85)",
     marginTop: 4,
   },
   logoutButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 8,
+    borderRadius: 4,
   },
   logoutText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 14,
   },
   statsContainer: {
     flexDirection: "row",
     padding: 16,
-    gap: 8,
+    gap: 10,
   },
   statCard: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 6,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "600",
+    color: "#212121",
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#666",
     marginTop: 4,
+    fontWeight: "500",
+    textTransform: "uppercase",
   },
   listHeader: {
     paddingHorizontal: 16,
@@ -313,8 +324,8 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "600",
+    color: "#212121",
   },
   listContent: {
     padding: 16,
@@ -322,50 +333,56 @@ const styles = StyleSheet.create({
   },
   ticketCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 6,
     padding: 16,
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   ticketHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   ticketInfo: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
   },
   ticketId: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#999",
     fontWeight: "600",
+    textTransform: "uppercase",
   },
   ticketTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "#212121",
     marginTop: 4,
+    lineHeight: 22,
   },
   statusBadge: {
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   statusText: {
     color: "#fff",
     fontSize: 11,
     fontWeight: "600",
+    textTransform: "uppercase",
   },
   ticketDescription: {
     fontSize: 14,
     color: "#666",
     marginBottom: 12,
+    lineHeight: 20,
   },
   ticketMeta: {
     flexDirection: "row",
@@ -377,9 +394,9 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   updateButton: {
-    backgroundColor: "#673ab7",
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: "#153D6F",
+    padding: 12,
+    borderRadius: 4,
     alignItems: "center",
   },
   updateButtonText: {
@@ -394,15 +411,15 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     padding: 24,
     maxHeight: "80%",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#212121",
     marginBottom: 8,
   },
   modalSubtitle: {
@@ -413,15 +430,16 @@ const styles = StyleSheet.create({
   statusOption: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 14,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   statusOptionCurrent: {
-    backgroundColor: "#e8f5e9",
-    borderWidth: 2,
-    borderColor: "#4caf50",
+    backgroundColor: "#E8F5E9",
+    borderColor: "#4CAF50",
   },
   statusDot: {
     width: 12,
@@ -431,22 +449,24 @@ const styles = StyleSheet.create({
   },
   statusOptionText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#333",
+    color: "#212121",
+    textTransform: "uppercase",
   },
   currentBadge: {
-    fontSize: 12,
-    color: "#4caf50",
+    fontSize: 11,
+    color: "#4CAF50",
     fontWeight: "600",
+    textTransform: "uppercase",
   },
   cancelButton: {
-    padding: 16,
+    padding: 14,
     alignItems: "center",
     marginTop: 8,
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#666",
     fontWeight: "600",
   },

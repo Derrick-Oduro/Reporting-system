@@ -1,5 +1,4 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -41,6 +40,17 @@ export default function CreateTicketScreen() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect admins - they should not create tickets
+  React.useEffect(() => {
+    if (user?.role === "admin") {
+      Alert.alert(
+        "Access Denied",
+        "Admins cannot create tickets. Only users can submit tickets.",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
+    }
+  }, [user]);
+
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -80,6 +90,12 @@ export default function CreateTicketScreen() {
 
     setIsLoading(true);
     try {
+      console.log("=== CREATING TICKET ===");
+      console.log("Title:", title);
+      console.log("Category:", category);
+      console.log("Priority:", priority);
+      console.log("Attachments to upload:", attachments.length);
+
       // Create ticket
       const ticketId = await ticketService.createTicket(
         user.id,
@@ -89,38 +105,79 @@ export default function CreateTicketScreen() {
         priority,
       );
 
-      // Save attachments
+      console.log("✅ Ticket created with ID:", ticketId);
+
+      // Save attachments metadata to database
+      let attachmentSuccessCount = 0;
+      let attachmentFailCount = 0;
+      const failedAttachments: string[] = [];
+
       for (const attachment of attachments) {
-        const fileName = attachment.name;
-        const fileUri = attachment.uri;
+        console.log("=== UPLOADING ATTACHMENT ===");
+        console.log("File name:", attachment.name);
+        console.log("File URI:", attachment.uri);
+        console.log("File type:", attachment.mimeType);
+        console.log("File size:", attachment.size);
 
-        // Copy file to app directory
-        const destPath = `${FileSystem.documentDirectory}tickets/${ticketId}/${fileName}`;
-        const destDir = `${FileSystem.documentDirectory}tickets/${ticketId}`;
+        try {
+          // First, upload the file to the server
+          console.log("Uploading file to server...");
+          const uploadedFilePath = await ticketService.uploadFile(
+            attachment.uri,
+            attachment.name,
+            attachment.mimeType,
+          );
+          console.log("File uploaded to:", uploadedFilePath);
 
-        // Create directory if it doesn't exist
-        await FileSystem.makeDirectoryAsync(destDir, { intermediates: true });
-        await FileSystem.copyAsync({ from: fileUri, to: destPath });
-
-        // Save to database
-        await ticketService.addAttachment(
-          ticketId,
-          fileName,
-          destPath,
-          attachment.mimeType,
-          attachment.size,
-        );
+          // Then, save the attachment metadata with the server file path
+          await ticketService.addAttachment(
+            ticketId,
+            attachment.name,
+            uploadedFilePath,
+            attachment.mimeType,
+            attachment.size,
+          );
+          console.log("✅ Attachment saved successfully:", attachment.name);
+          attachmentSuccessCount++;
+        } catch (error: any) {
+          console.error("❌ Failed to save attachment:", attachment.name);
+          console.error("Error details:", error);
+          console.error("Error message:", error.message);
+          attachmentFailCount++;
+          failedAttachments.push(attachment.name);
+        }
       }
 
-      Alert.alert("Success", "Ticket submitted successfully", [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ]);
+      console.log("=== UPLOAD SUMMARY ===");
+      console.log("Successful:", attachmentSuccessCount);
+      console.log("Failed:", attachmentFailCount);
+
+      // Show appropriate message
+      if (attachmentFailCount > 0) {
+        Alert.alert(
+          "Partial Success",
+          `Ticket created successfully, but ${attachmentFailCount} attachment(s) failed to upload:\n${failedAttachments.join("\n")}\n\nYou can try adding them later by editing the ticket.`,
+          [{ text: "OK", onPress: () => router.back() }],
+        );
+      } else {
+        Alert.alert("Success", "Ticket submitted successfully", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      }
     } catch (error: any) {
-      console.error("Error creating ticket:", error);
-      Alert.alert("Error", error.message || "Failed to create ticket");
+      console.error("❌ Error creating ticket:");
+      console.error("Error object:", error);
+      console.error("Error message:", error?.message);
+      console.error("Error string:", String(error));
+
+      const errorMessage =
+        error?.message || error?.toString() || "Failed to create ticket";
+
+      Alert.alert(
+        "Error Creating Ticket",
+        errorMessage + "\n\nPlease check the console logs for more details.",
+        [{ text: "OK" }],
+      );
     } finally {
       setIsLoading(false);
     }
@@ -253,15 +310,20 @@ export default function CreateTicketScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#F5F5F5",
   },
   content: {
     padding: 16,
   },
   form: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 6,
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   inputGroup: {
     marginBottom: 20,
@@ -269,19 +331,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: "#212121",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: "#E0E0E0",
+    borderRadius: 4,
     padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
+    fontSize: 15,
+    backgroundColor: "#F5F5F5",
+    color: "#212121",
   },
   textArea: {
     minHeight: 120,
+    textAlignVertical: "top",
   },
   radioGroup: {
     flexDirection: "row",
@@ -289,20 +353,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   radioButton: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
+    borderColor: "#E0E0E0",
+    backgroundColor: "#F5F5F5",
   },
   radioButtonSelected: {
-    backgroundColor: "#1a73e8",
-    borderColor: "#1a73e8",
+    backgroundColor: "#153D6F",
+    borderColor: "#153D6F",
   },
   radioText: {
     fontSize: 14,
     color: "#666",
+    fontWeight: "500",
   },
   radioTextSelected: {
     color: "#fff",
@@ -310,14 +375,15 @@ const styles = StyleSheet.create({
   },
   attachButton: {
     borderWidth: 1,
-    borderColor: "#1a73e8",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: "#153D6F",
+    borderRadius: 4,
+    padding: 14,
     alignItems: "center",
     borderStyle: "dashed",
+    backgroundColor: "#F0F4F8",
   },
   attachButtonText: {
-    color: "#1a73e8",
+    color: "#153D6F",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -326,29 +392,31 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 12,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginTop: 8,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 4,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   attachmentName: {
     flex: 1,
-    fontSize: 14,
-    color: "#333",
+    fontSize: 13,
+    color: "#212121",
   },
   removeButton: {
-    color: "#d32f2f",
-    fontSize: 14,
+    color: "#F44336",
+    fontSize: 13,
     fontWeight: "600",
   },
   submitButton: {
-    backgroundColor: "#1a73e8",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#153D6F",
+    padding: 14,
+    borderRadius: 4,
     alignItems: "center",
     marginTop: 12,
   },
   submitButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   submitButtonText: {
     color: "#fff",

@@ -1,8 +1,12 @@
+import { File, Paths } from "expo-file-system";
 import { router, useLocalSearchParams } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Linking,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { API_CONFIG } from "../../config/api.config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabaseContext } from "../../contexts/DatabaseContext";
 import {
@@ -52,10 +57,16 @@ export default function TicketDetailScreen() {
       }
 
       const ticketComments = await ticketService.getTicketComments(Number(id));
+      console.log("Loaded comments:", ticketComments.length);
       setComments(ticketComments);
 
       const ticketAttachments = await ticketService.getTicketAttachments(
         Number(id),
+      );
+      console.log(
+        "Loaded attachments:",
+        ticketAttachments.length,
+        ticketAttachments,
       );
       setAttachments(ticketAttachments);
 
@@ -94,6 +105,97 @@ export default function TicketDetailScreen() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getAttachmentUrl = (filePath: string) => {
+    // If it's already a full URL, return as is
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+      return filePath;
+    }
+    // Otherwise, construct full URL from backend base URL
+    const baseUrl = API_CONFIG.BASE_URL.replace("/api", "");
+    // Remove leading slash if present
+    const cleanPath = filePath.startsWith("/")
+      ? filePath.substring(1)
+      : filePath;
+    return `${baseUrl}/${cleanPath}`;
+  };
+
+  const handleOpenAttachment = async (attachment: Attachment) => {
+    if (!attachment.file_path) {
+      Alert.alert("Error", "File path not available");
+      return;
+    }
+
+    try {
+      const fullUrl = getAttachmentUrl(attachment.file_path);
+      console.log("Opening attachment URL:", fullUrl);
+      const isPDF = attachment.file_type?.includes("pdf");
+
+      if (Platform.OS === "web") {
+        // On web, open in new tab
+        window.open(fullUrl, "_blank");
+      } else if (isPDF) {
+        // For PDFs, use WebBrowser
+        await WebBrowser.openBrowserAsync(fullUrl);
+      } else {
+        // For other files, try to open with system
+        const supported = await Linking.canOpenURL(fullUrl);
+        if (supported) {
+          await Linking.openURL(fullUrl);
+        } else {
+          Alert.alert("Error", "Unable to open this file type");
+        }
+      }
+    } catch (error) {
+      console.error("Error opening attachment:", error);
+      Alert.alert("Error", "Failed to open attachment");
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: Attachment) => {
+    if (!attachment.file_path) {
+      Alert.alert("Error", "File path not available");
+      return;
+    }
+
+    try {
+      const fullUrl = getAttachmentUrl(attachment.file_path);
+      console.log("Downloading attachment URL:", fullUrl);
+
+      if (Platform.OS === "web") {
+        // On web, trigger download
+        const link = document.createElement("a");
+        link.href = fullUrl;
+        link.download = attachment.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        Alert.alert("Success", "Download started");
+      } else {
+        // On mobile, download to device
+        const file = await File.downloadFileAsync(
+          fullUrl,
+          new File(Paths.cache, attachment.file_name),
+        );
+
+        Alert.alert("Success", `File downloaded successfully`, [
+          {
+            text: "Open",
+            onPress: async () => {
+              const supported = await Linking.canOpenURL(file.uri);
+              if (supported) {
+                await Linking.openURL(file.uri);
+              }
+            },
+          },
+          { text: "OK" },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error downloading attachment:", error);
+      Alert.alert("Error", "Failed to download attachment");
+    }
   };
 
   if (isLoading) {
@@ -150,21 +252,44 @@ export default function TicketDetailScreen() {
       </View>
 
       {/* Attachments */}
-      {attachments.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Attachments ({attachments.length})
-          </Text>
-          {attachments.map((attachment) => (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          Attachments ({attachments.length})
+        </Text>
+        {attachments.length === 0 ? (
+          <Text style={styles.noItemsText}>No attachments</Text>
+        ) : (
+          attachments.map((attachment) => (
             <View key={attachment.id} style={styles.attachmentItem}>
-              <Text style={styles.attachmentName}>{attachment.file_name}</Text>
-              <Text style={styles.attachmentDate}>
-                {formatDate(attachment.uploaded_at)}
-              </Text>
+              <View style={styles.attachmentInfo}>
+                <Text style={styles.attachmentName}>
+                  {attachment.file_name}
+                </Text>
+                <Text style={styles.attachmentMeta}>
+                  {attachment.file_type && `${attachment.file_type} • `}
+                  {formatDate(attachment.uploaded_at)}
+                </Text>
+              </View>
+              <View style={styles.attachmentActions}>
+                <TouchableOpacity
+                  style={styles.attachmentButton}
+                  onPress={() => handleOpenAttachment(attachment)}
+                >
+                  <Text style={styles.attachmentButtonText}>View</Text>
+                </TouchableOpacity>
+                {user?.role === "admin" && (
+                  <TouchableOpacity
+                    style={[styles.attachmentButton, styles.downloadButton]}
+                    onPress={() => handleDownloadAttachment(attachment)}
+                  >
+                    <Text style={styles.attachmentButtonText}>Download</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          ))}
-        </View>
-      )}
+          ))
+        )}
+      </View>
 
       {/* Status History */}
       {statusHistory.length > 0 && (
@@ -243,40 +368,47 @@ export default function TicketDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FAFAFA",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#FAFAFA",
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    backgroundColor: "#FAFAFA",
   },
   errorText: {
     fontSize: 18,
-    color: "#666",
+    color: "#757575",
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: "#1a73e8",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: "#153D6F",
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   backButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   header: {
     backgroundColor: "#fff",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: "#E0E0E0",
   },
   headerRow: {
     flexDirection: "row",
@@ -290,19 +422,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   statusBadge: {
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   statusText: {
     color: "#fff",
     fontSize: 11,
     fontWeight: "600",
+    textTransform: "uppercase",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#212121",
     marginBottom: 12,
   },
   metaRow: {
@@ -321,12 +454,12 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: "#fff",
     padding: 20,
-    marginTop: 12,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: "600",
+    color: "#212121",
     marginBottom: 12,
   },
   description: {
@@ -336,104 +469,161 @@ const styles = StyleSheet.create({
   },
   attachmentItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 8,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  attachmentInfo: {
+    flex: 1,
   },
   attachmentName: {
-    flex: 1,
     fontSize: 14,
-    color: "#333",
+    color: "#212121",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  attachmentMeta: {
+    fontSize: 12,
+    color: "#666",
+  },
+  attachmentActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  attachmentButton: {
+    backgroundColor: "#153D6F",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 4,
+  },
+  downloadButton: {
+    backgroundColor: "#00897B",
+  },
+  attachmentButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
   attachmentDate: {
     fontSize: 12,
-    color: "#999",
+    color: "#9E9E9E",
+  },
+  noItemsText: {
+    fontSize: 15,
+    color: "#9E9E9E",
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingVertical: 12,
   },
   historyItem: {
     flexDirection: "row",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   historyDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#1a73e8",
-    marginTop: 4,
-    marginRight: 12,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#153D6F",
+    marginTop: 6,
+    marginRight: 16,
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   historyContent: {
     flex: 1,
   },
   historyText: {
-    fontSize: 14,
-    color: "#333",
+    fontSize: 15,
+    color: "#424242",
+    fontWeight: "500",
   },
   historyStatus: {
-    fontWeight: "600",
-    color: "#1a73e8",
+    fontWeight: "700",
+    color: "#153D6F",
   },
   historyMeta: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
+    fontSize: 13,
+    color: "#9E9E9E",
+    marginTop: 6,
   },
   commentCard: {
-    backgroundColor: "#f9f9f9",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: "#1a73e8",
+    backgroundColor: "#F8F9FA",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#153D6F",
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   commentHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   commentAuthor: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#212121",
   },
   adminBadge: {
-    color: "#1a73e8",
-    fontSize: 12,
+    color: "#153D6F",
+    fontSize: 13,
+    fontWeight: "700",
   },
   commentDate: {
     fontSize: 12,
-    color: "#999",
+    color: "#9E9E9E",
+    fontWeight: "500",
   },
   commentText: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: 15,
+    color: "#616161",
+    lineHeight: 22,
   },
   addCommentContainer: {
-    marginTop: 16,
+    marginTop: 20,
   },
   commentInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 80,
-    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    minHeight: 100,
+    backgroundColor: "#FAFAFA",
     marginBottom: 12,
+    color: "#212121",
+    textAlignVertical: "top",
   },
   commentButton: {
-    backgroundColor: "#1a73e8",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#153D6F",
+    padding: 16,
+    borderRadius: 12,
     alignItems: "center",
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   commentButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   commentButtonText: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });
