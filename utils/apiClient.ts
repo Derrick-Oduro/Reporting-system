@@ -124,22 +124,27 @@ class ApiClient {
 
     console.log(`📤 File Upload: POST ${endpoint}`);
     console.log("URL:", url);
-    console.log("File:", fileName);
+    console.log("File URI:", fileUri);
+    console.log("File Name:", fileName);
+    console.log("MIME Type:", mimeType);
 
     try {
       const formData = new FormData();
 
-      // Fetch the file and create a blob
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
+      // For React Native, we pass the file as an object with uri, name, and type
+      formData.append("file", {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
 
-      // Append the file to FormData
-      formData.append("file", blob, fileName);
+      console.log("FormData prepared, uploading...");
 
       const uploadResponse = await fetch(url, {
         method: "POST",
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
+          // Don't set Content-Type - let fetch set it with the boundary
         },
         body: formData,
       });

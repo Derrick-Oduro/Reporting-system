@@ -8,11 +8,15 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
+    // Decode the original filename to handle special characters
+    const decodedName = decodeURIComponent(file.originalname);
     // Create unique filename: timestamp-originalname
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext);
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+    const ext = path.extname(decodedName);
+    const nameWithoutExt = path.basename(decodedName, ext);
+    // Clean the filename - remove special characters that might cause issues
+    const cleanName = nameWithoutExt.replace(/[^a-zA-Z0-9-_\s]/g, "");
+    cb(null, `${cleanName}-${uniqueSuffix}${ext}`);
   },
 });
 

@@ -17,7 +17,7 @@
 
 export const API_CONFIG = {
   BASE_URL: __DEV__
-    ? "http://172.20.10.2:3000/api" // 👈 CHANGE THIS FOR ANDROID EMULATOR OR PHYSICAL DEVICE
+    ? "http://10.21.41.205:3000/api" // 👈 CHANGE THIS FOR ANDROID EMULATOR OR PHYSICAL DEVICE
     : "https://your-production-api.com/api",
   TIMEOUT: 10000,
 };

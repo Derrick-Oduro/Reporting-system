@@ -19,8 +19,23 @@ router.post(
   upload.single("file"),
   (req: AuthRequest, res: Response) => {
     try {
+      console.log("=== FILE UPLOAD REQUEST ===");
+      console.log("File received:", req.file ? "yes" : "no");
+      if (req.file) {
+        console.log("Original name:", req.file.originalname);
+        console.log("Filename:", req.file.filename);
+        console.log("Size:", req.file.size, "bytes");
+        console.log("MIME type:", req.file.mimetype);
+        console.log("Path:", req.file.path);
+      }
+
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      if (req.file.size === 0) {
+        console.error("ERROR: File size is 0 bytes!");
+        return res.status(400).json({ error: "Uploaded file is empty" });
       }
 
       // Return the file path that can be used to access the file

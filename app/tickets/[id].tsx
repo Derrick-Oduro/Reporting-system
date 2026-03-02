@@ -108,10 +108,21 @@ export default function TicketDetailScreen() {
   };
 
   const getAttachmentUrl = (filePath: string) => {
+    // Check for local file paths that can't be accessed
+    if (
+      filePath.startsWith("file://") ||
+      filePath.startsWith("content://") ||
+      filePath.includes("var/mobile") ||
+      filePath.includes("data/user")
+    ) {
+      return null; // Invalid - local file path
+    }
+
     // If it's already a full URL, return as is
     if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
       return filePath;
     }
+
     // Otherwise, construct full URL from backend base URL
     const baseUrl = API_CONFIG.BASE_URL.replace("/api", "");
     // Remove leading slash if present
@@ -129,6 +140,15 @@ export default function TicketDetailScreen() {
 
     try {
       const fullUrl = getAttachmentUrl(attachment.file_path);
+
+      if (!fullUrl) {
+        Alert.alert(
+          "Cannot Open File",
+          "This attachment was created before the file upload system was implemented and cannot be viewed. Please re-upload the file by creating a new ticket.",
+        );
+        return;
+      }
+
       console.log("Opening attachment URL:", fullUrl);
       const isPDF = attachment.file_type?.includes("pdf");
 
@@ -161,6 +181,15 @@ export default function TicketDetailScreen() {
 
     try {
       const fullUrl = getAttachmentUrl(attachment.file_path);
+
+      if (!fullUrl) {
+        Alert.alert(
+          "Cannot Download File",
+          "This attachment was created before the file upload system was implemented and cannot be downloaded. Please re-upload the file by creating a new ticket.",
+        );
+        return;
+      }
+
       console.log("Downloading attachment URL:", fullUrl);
 
       if (Platform.OS === "web") {
