@@ -38,6 +38,7 @@ export interface TicketWithUser extends Ticket {
   user_email: string;
   user_name: string;
   student_id?: string;
+  comment_count?: number;
 }
 
 export interface Attachment {
@@ -76,6 +77,7 @@ export interface Notification {
   ticket_id?: number;
   title: string;
   message: string;
+  type: string;
   is_read: number;
   created_at: string;
 }

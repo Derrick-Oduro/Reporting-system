@@ -150,7 +150,12 @@ router.get("/", (req: AuthRequest, res: Response) => {
       tickets = db
         .prepare(
           `
-        SELECT t.*, u.full_name as user_name, u.email as user_email
+        SELECT t.*, u.full_name as user_name, u.email as user_email, u.student_id,
+               COALESCE((
+                 SELECT COUNT(*) FROM comments 
+                 WHERE ticket_id = t.id 
+                 AND (t.last_admin_view_at IS NULL OR created_at > t.last_admin_view_at)
+               ), 0) as comment_count
         FROM tickets t
         JOIN users u ON t.user_id = u.id
         ORDER BY t.created_at DESC
@@ -161,7 +166,9 @@ router.get("/", (req: AuthRequest, res: Response) => {
       tickets = db
         .prepare(
           `
-        SELECT * FROM tickets
+        SELECT t.*,
+               COALESCE((SELECT COUNT(*) FROM comments WHERE ticket_id = t.id), 0) as comment_count
+        FROM tickets t
         WHERE user_id = ?
         ORDER BY created_at DESC
       `,
@@ -188,7 +195,7 @@ router.get("/:id", (req: AuthRequest, res: Response) => {
     const ticket: any = db
       .prepare(
         `
-      SELECT t.*, u.full_name as user_name, u.email as user_email
+      SELECT t.*, u.full_name as user_name, u.email as user_email, u.student_id
       FROM tickets t
       JOIN users u ON t.user_id = u.id
       WHERE t.id = ?
@@ -207,6 +214,13 @@ router.get("/:id", (req: AuthRequest, res: Response) => {
     if (req.userRole !== "admin" && ticket.user_id !== req.userId) {
       console.log("ERROR: Access denied");
       return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Mark ticket as viewed by admin
+    if (req.userRole === "admin") {
+      db.prepare(
+        `UPDATE tickets SET last_admin_view_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      ).run(id);
     }
 
     // Get comments
@@ -250,7 +264,7 @@ router.patch("/:id/status", requireAdmin, (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!["pending", "in_progress", "resolved", "closed"].includes(status)) {
+  if (!["pending", "in-progress", "resolved", "closed"].includes(status)) {
     return res.status(400).json({ error: "Invalid status" });
   }
 

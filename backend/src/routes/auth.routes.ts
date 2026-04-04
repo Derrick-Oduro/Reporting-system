@@ -39,8 +39,8 @@ router.post(
 
       // Insert user
       const stmt = db.prepare(`
-        INSERT INTO users (email, password, full_name, student_id, phone, role)
-        VALUES (?, ?, ?, ?, ?, 'student')
+        INSERT INTO users (email, password, full_name, student_id, phone, role, is_verified)
+        VALUES (?, ?, ?, ?, ?, 'student', 0)
       `);
 
       const result = stmt.run(
@@ -63,7 +63,7 @@ router.post(
       const user = db
         .prepare(
           `
-        SELECT id, email, full_name, student_id, phone, role, created_at
+        SELECT id, email, full_name, student_id, phone, role, is_verified, verified_at, updated_at, created_at
         FROM users WHERE id = ?
       `,
         )
@@ -98,7 +98,7 @@ router.post(
       const user: any = db
         .prepare(
           `
-        SELECT id, email, password, full_name, student_id, phone, role, created_at
+        SELECT id, email, password, full_name, student_id, phone, role, is_verified, verified_at, updated_at, created_at
         FROM users WHERE email = ?
       `,
         )
@@ -142,7 +142,7 @@ router.get("/me", authenticateToken, (req: AuthRequest, res: Response) => {
     const user = db
       .prepare(
         `
-      SELECT id, email, full_name, student_id, phone, role, created_at
+      SELECT id, email, full_name, student_id, phone, role, is_verified, verified_at, updated_at, created_at
       FROM users WHERE id = ?
     `,
       )

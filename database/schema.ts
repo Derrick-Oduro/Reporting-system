@@ -32,6 +32,7 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       resolved_at DATETIME,
+      last_admin_view_at DATETIME,
       FOREIGN KEY (user_id) REFERENCES users (id)
     );
   `);
@@ -85,12 +86,26 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
       ticket_id INTEGER,
       title TEXT NOT NULL,
       message TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'info',
       is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users (id),
       FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE
     );
   `);
+
+  // Add last_admin_view_at column if it doesn't exist (migration for existing databases)
+  try {
+    await db.execAsync(`
+      ALTER TABLE tickets ADD COLUMN last_admin_view_at DATETIME;
+    `);
+    console.log("Added last_admin_view_at column to tickets table");
+  } catch (error: any) {
+    // Column already exists or other error - that's fine
+    if (!error.message.includes("duplicate column")) {
+      console.log("Column migration note:", error.message);
+    }
+  }
 
   // Create indexes for better performance
   await db.execAsync(`

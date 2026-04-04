@@ -20,6 +20,8 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
+  const isWeb = Platform.OS === "web";
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -29,6 +31,12 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email.toLowerCase().trim(), password);
+
+      if (isWeb) {
+        router.replace("/admin/dashboard");
+        return;
+      }
+
       // Navigation will be handled by auth state
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid credentials");
@@ -40,69 +48,73 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, isWeb && styles.webContainer]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>SPMS Ticketing System</Text>
-          <Text style={styles.subtitle}>Sign In</Text>
+        <View style={[styles.content, isWeb && styles.webContent]}>
+          <View style={[styles.formShell, isWeb && styles.webFormShell]}>
+            <Text style={styles.title}>Admin Login</Text>
+            <Text style={styles.subtitle}>Reporting System</Text>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="your.email@example.com"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!isLoading}
-              />
-            </View>
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!isLoading}
+                />
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!isLoading}
-              />
-            </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  editable={!isLoading}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+
+              {!isWeb && (
+                <TouchableOpacity
+                  style={styles.linkButton}
+                  onPress={() => router.push("/auth/register")}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.linkText}>
+                    Don't have an account?{" "}
+                    <Text style={styles.linkTextBold}>Register</Text>
+                  </Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push("/auth/register")}
-              disabled={isLoading}
-            >
-              <Text style={styles.linkText}>
-                Don't have an account?{" "}
-                <Text style={styles.linkTextBold}>Register</Text>
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.divider} />
 
-            <View style={styles.divider} />
-
-            <View style={styles.adminInfo}>
-              <Text style={styles.adminInfoTitle}>Test Credentials:</Text>
-              <Text style={styles.adminInfoText}>
-                Admin: admin@spms.edu / admin123
-              </Text>
+              <View style={styles.adminInfo}>
+                <Text style={styles.adminInfoTitle}>Test Credentials:</Text>
+                <Text style={styles.adminInfoText}>
+                  Admin: admin@system.com / admin123
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -116,6 +128,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FAFAFA",
   },
+  webContainer: {
+    backgroundColor: "#eef2f7",
+  },
   scrollContent: {
     flexGrow: 1,
   },
@@ -123,6 +138,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 24,
+  },
+  webContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  formShell: {
+    width: "100%",
+    maxWidth: 420,
+  },
+  webFormShell: {
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderRadius: 20,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: "rgba(21,61,111,0.08)",
+    shadowColor: "#153D6F",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 30,
+    elevation: 6,
   },
   title: {
     fontSize: 24,

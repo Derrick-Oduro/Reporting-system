@@ -133,42 +133,28 @@ export default function HomeScreen() {
 
   const renderTicketItem = ({ item }: { item: Ticket }) => (
     <TouchableOpacity
-      style={styles.ticketCard}
+      style={[
+        styles.ticketCard,
+        { borderLeftColor: STATUS_COLORS[item.status] },
+      ]}
       onPress={() => router.push(`/tickets/${item.id}`)}
-      activeOpacity={0.7}
+      activeOpacity={0.6}
     >
       <View style={styles.cardHeader}>
-        <View
-          style={[
-            styles.statusDot,
-            { backgroundColor: STATUS_COLORS[item.status] },
-          ]}
-        />
         <Text style={styles.ticketTitle} numberOfLines={1}>
           {item.title}
+        </Text>
+        <Text
+          style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}
+        >
+          {STATUS_LABELS[item.status]}
         </Text>
       </View>
       <Text style={styles.ticketDescription} numberOfLines={2}>
         {item.description}
       </Text>
       <View style={styles.ticketFooter}>
-        <View style={styles.footerLeft}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category}</Text>
-          </View>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: STATUS_COLORS[item.status] + "20" },
-            ]}
-          >
-            <Text
-              style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}
-            >
-              {STATUS_LABELS[item.status]}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.categoryText}>{item.category}</Text>
         <Text style={styles.ticketDate}>{formatDate(item.created_at)}</Text>
       </View>
     </TouchableOpacity>
@@ -401,26 +387,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   listContent: {
-    padding: 16,
+    paddingTop: 0,
   },
   ticketCard: {
     backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e8eaed",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e8eaed",
+    borderLeftWidth: 4,
   },
   cardHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 10,
+    marginBottom: 6,
   },
   ticketTitle: {
     flex: 1,
@@ -428,45 +409,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#202124",
     lineHeight: 20,
-  },
-  statusBadge: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    marginRight: 12,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   ticketDescription: {
     fontSize: 13,
     color: "#5f6368",
-    marginBottom: 12,
+    marginBottom: 8,
     lineHeight: 18,
   },
   ticketFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f3f4",
-  },
-  footerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  categoryBadge: {
-    backgroundColor: "#e3f2fd",
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 4,
   },
   categoryText: {
-    fontSize: 11,
-    color: "#153D6F",
-    fontWeight: "600",
+    fontSize: 12,
+    color: "#5f6368",
+    fontWeight: "500",
   },
   ticketDate: {
     fontSize: 12,

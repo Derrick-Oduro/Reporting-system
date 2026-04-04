@@ -3,25 +3,25 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { API_CONFIG } from "../../config/api.config";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDatabaseContext } from "../../contexts/DatabaseContext";
 import {
-    Attachment,
-    Comment,
-    StatusHistory,
-    TicketWithUser,
+  Attachment,
+  Comment,
+  StatusHistory,
+  TicketWithUser,
 } from "../../types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -250,7 +250,10 @@ export default function TicketDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       {/* Ticket Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -265,6 +268,30 @@ export default function TicketDetailScreen() {
           </View>
         </View>
         <Text style={styles.title}>{ticket.title}</Text>
+
+        {/* Student Information */}
+        {user?.role === "admin" && (
+          <View style={styles.studentInfoCard}>
+            <Text style={styles.studentInfoLabel}>Student Information</Text>
+            <View style={styles.studentInfoRow}>
+              <Text style={styles.studentInfoText}>
+                Name: {ticket.user_name}
+              </Text>
+            </View>
+            {ticket.student_id && (
+              <View style={styles.studentIdHighlight}>
+                <Text style={styles.studentIdLabel}>Student ID:</Text>
+                <Text style={styles.studentIdValue}>{ticket.student_id}</Text>
+              </View>
+            )}
+            <View style={styles.studentInfoRow}>
+              <Text style={styles.studentInfoText}>
+                Email: {ticket.user_email}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.metaRow}>
           <Text style={styles.metaText}>Category: {ticket.category}</Text>
           <Text style={styles.metaText}>Priority: {ticket.priority}</Text>
@@ -349,15 +376,17 @@ export default function TicketDetailScreen() {
         {comments.map((comment) => (
           <View key={comment.id} style={styles.commentCard}>
             <View style={styles.commentHeader}>
-              <Text style={styles.commentAuthor}>
-                {comment.user_name}
-                {comment.user_role === "admin" && (
-                  <Text style={styles.adminBadge}> (Admin)</Text>
-                )}
-              </Text>
-              <Text style={styles.commentDate}>
-                {formatDate(comment.created_at)}
-              </Text>
+              <View style={styles.commentAuthorSection}>
+                <Text style={styles.commentAuthor}>
+                  {comment.user_name}
+                  {comment.user_role === "admin" && (
+                    <Text style={styles.adminBadge}> • Admin</Text>
+                  )}
+                </Text>
+                <Text style={styles.commentDate}>
+                  {formatDate(comment.created_at)}
+                </Text>
+              </View>
             </View>
             <Text style={styles.commentText}>{comment.comment}</Text>
           </View>
@@ -397,20 +426,23 @@ export default function TicketDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f5f7fa",
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f5f7fa",
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f5f7fa",
   },
   errorText: {
     fontSize: 18,
@@ -436,8 +468,9 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#fff",
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    marginHorizontal: 12,
+    marginTop: 12,
+    borderRadius: 12,
   },
   headerRow: {
     flexDirection: "row",
@@ -451,9 +484,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   statusBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
   },
   statusText: {
     color: "#fff",
@@ -480,10 +513,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#999",
   },
+  studentInfoCard: {
+    backgroundColor: "#f0f4f8",
+    padding: 18,
+    borderRadius: 16,
+    marginVertical: 16,
+  },
+  studentInfoLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#153D6F",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  studentInfoRow: {
+    marginBottom: 8,
+  },
+  studentInfoText: {
+    fontSize: 14,
+    color: "#424242",
+    fontWeight: "500",
+  },
+  studentIdHighlight: {
+    backgroundColor: "#153D6F",
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  studentIdLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#fff",
+    textTransform: "uppercase",
+  },
+  studentIdValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 1,
+  },
   section: {
     backgroundColor: "#fff",
     padding: 20,
-    marginTop: 10,
+    marginTop: 8,
+    marginHorizontal: 12,
+    borderRadius: 12,
   },
   sectionTitle: {
     fontSize: 16,
@@ -499,12 +577,10 @@ const styles = StyleSheet.create({
   attachmentItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#F5F5F5",
-    borderRadius: 6,
+    padding: 14,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
   },
   attachmentInfo: {
     flex: 1,
@@ -583,37 +659,37 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   commentCard: {
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#153D6F",
-    shadowColor: "#153D6F",
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 1,
   },
   commentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     marginBottom: 12,
+  },
+  commentAuthorSection: {
+    flexDirection: "column",
   },
   commentAuthor: {
     fontSize: 15,
     fontWeight: "700",
     color: "#212121",
+    marginBottom: 4,
   },
   adminBadge: {
     color: "#153D6F",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   commentDate: {
     fontSize: 12,
-    color: "#9E9E9E",
-    fontWeight: "500",
+    color: "#999",
+    fontWeight: "400",
   },
   commentText: {
     fontSize: 15,
@@ -624,13 +700,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   commentInput: {
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
     minHeight: 100,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f8f9fa",
     marginBottom: 12,
     color: "#212121",
     textAlignVertical: "top",

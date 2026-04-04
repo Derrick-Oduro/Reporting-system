@@ -14,7 +14,7 @@ import {
     View,
 } from "react-native";
 
-export default function NotificationsScreen() {
+export default function AdminNotificationsScreen() {
   const { user } = useAuth();
   const { notificationService } = useDatabaseContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -150,7 +150,7 @@ export default function NotificationsScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1a73e8" />
+        <ActivityIndicator size="large" color="#153D6F" />
       </View>
     );
   }
@@ -306,13 +306,13 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#212121",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#666",
   },
 });
